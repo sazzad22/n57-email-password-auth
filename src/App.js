@@ -2,7 +2,13 @@ import logo from "./logo.svg";
 import "./App.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 
-import { createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  getAuth,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import { app } from "./firebase.init";
 import { Button, Form } from "react-bootstrap";
 import { useState } from "react";
@@ -19,7 +25,7 @@ function App() {
   const [error, setError] = useState("");
 
   //register or login controlling checkbox
-  const [registered,setRegistered] = useState(false);
+  const [registered, setRegistered] = useState(false);
 
   // const handleEmailChange = e => {
   //   console.log(e.target.value);
@@ -31,11 +37,11 @@ function App() {
     setPassword(e.target.value);
   };
 
-  const handleRegisteredChange = e => {
+  const handleRegisteredChange = (e) => {
     setRegistered(e.target.checked); //true or false
-  }
+  };
 
-  //this handler trigers with the button click inside the form. But the button reloads the page. In casse of spa in order to stop reloading the page we write e.preventDefault()
+  //this handler trigers with the button click inside the form. But the button reloads the page. In case of spa in order to stop reloading the page we write e.preventDefault()
   const handleFormSubmit = (e) => {
     e.preventDefault();
 
@@ -59,32 +65,58 @@ function App() {
 
     if (registered) {
       signInWithEmailAndPassword(auth, email, password)
-        .then(result => {
+        .then((result) => {
           const user = result.user;
           console.log(user);
-
         })
-        .catch(error => {
+        .catch((error) => {
           console.log(error);
           setError(error.message);
-      })
-    }
-    else {
+        });
+    } else {
       //we are creating new user here(copied from firebase) . We can only create one user with one email by default.
-    createUserWithEmailAndPassword(auth, email, password)
-    .then((userCredential) => {
-      // Signed in
-      const user = userCredential.user;
-      console.log(user);
-      // ...
-    })
-    .catch((error) => {
-      console.log(error);
-      // ..
-    });
-  e.preventDefault();
+      createUserWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          // Signed in
+          const user = userCredential.user;
+          
+          //clearing the input fields after a new user in created.
+          setEmail('');
+          setPassword('');
+
+          verifyEmail();
+          
+        })
+        .catch((error) => {
+          console.log(error);
+          // ..
+        });
+      e.preventDefault();
     }
   };
+
+  //a function for sending verification email for first time registering. The inside code is from firebase user manager. this function is required to be called inside the handleformsubmit
+  const verifyEmail = () => {
+    sendEmailVerification(auth.currentUser).then((result) => {
+      console.log(result);
+      console.log("email verification sent");
+    });
+  };
+
+  //sending password reset email
+  const handlePasswordReset = () => {
+    sendPasswordResetEmail(auth, email)
+  .then(() => {
+    // Password reset email sent!
+    console.log('reset Email sent');
+  })
+  .catch((error) => {
+    const errorCode = error.code;
+    const errorMessage = error.message;
+    console.log(errorCode,errorMessage);
+  });
+  }
+
   return (
     <div>
       {/* <form onSubmit={handleFormSubmit} action="">
@@ -96,7 +128,15 @@ function App() {
       </form> */}
 
       <div className="registration w-50 mx-auto">
-        <h1 className={ registered ? "text-white bg-info  p-3 " :"text-white bg-primary  p-3 "}>Please {registered ? 'Login' : 'Register'}!!</h1>
+        <h1
+          className={
+            registered
+              ? "text-white bg-info  p-3 rounded "
+              : "text-white bg-primary  p-3 rounded "
+          }
+        >
+          Please {registered ? "Login" : "Register"}!!
+        </h1>
         <Form noValidate validated={validated} onSubmit={handleFormSubmit}>
           <Form.Group className="mb-3" controlId="formBasicEmail">
             <Form.Label>Email address</Form.Label>
@@ -128,12 +168,19 @@ function App() {
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="formBasicCheckbox">
-            <Form.Check onChange={handleRegisteredChange} type="checkbox" label="Registered Already?" />
+            <Form.Check
+              onChange={handleRegisteredChange}
+              type="checkbox"
+              label="Registered Already?"
+            />
           </Form.Group>
           <p className="text-danger">{error}</p>
 
-          <Button variant={registered ? 'info' : 'primary'} type="submit">
-          {registered ? 'Login' : 'Register'}
+          <Button onClick={handlePasswordReset} variant="link">Forgot Password</Button>
+          <br />
+
+          <Button variant={registered ? "info" : "primary"} type="submit">
+            {registered ? "Login" : "Register"}
           </Button>
         </Form>
       </div>
